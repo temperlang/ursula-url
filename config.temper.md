@@ -1,5 +1,5 @@
 
 ```temper
-export let name = "temper-fetch";
+export let name = "ursula-url";
 import("./test");
 ```
