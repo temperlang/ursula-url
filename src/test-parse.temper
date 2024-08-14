@@ -1,7 +1,4 @@
 
-let {...} = import("../src/parser.temper");
-let {...} = import("std/testing");
-
 test("Cloudflare DNS") {
   assert(Parser.url("http://1.1.1.1").format() == "http://1.1.1.1");
 }

@@ -1,6 +1,4 @@
 
-let {...} = import("./util.temper");
-
 export class Scheme {
   public var scheme: String;
 
