@@ -128,15 +128,14 @@ export class Path {
 }
 
 export class Query {
-  public parameters: Mapped<String, String | Null>;
+  public parameters: Listed<Pair<String, String | Null>>;
 
   public format(): String {
-    return parameters.keys.join("&", fn(key: String): String {
-      let value = parameters[key];
-      if (value == null) {
-        return urlEncode(key);
+    return parameters.join("&", fn(pair: Pair<String, String | Null>): String {
+      if (pair.value == null) {
+        return urlEncode(pair.key);
       } else {
-        return "${urlEncode(key)}=${urlEncode(value.as<String>())}";
+        return "${urlEncode(pair.key)}=${urlEncode(pair.value.as<String>())}";
       }
     });
   }

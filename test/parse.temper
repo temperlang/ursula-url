@@ -6,7 +6,7 @@ test("Cloudflare DNS") {
   assert(Parser.url("http://1.1.1.1").format() == "http://1.1.1.1");
 }
 
-test("Example") {
+test("Example Website") {
   assert(Parser.url("https://example.com").format() == "https://example.com");
 }
 
@@ -14,3 +14,21 @@ test("File Empty") {
   let s = "file:///usr/home/Bob+Jones/Code/temper-fetch/config.temper.md";
   assert(Parser.url(s).format() == s);
 }
+
+test("Temper GitHub") {
+  let s = "https://github.com/temperlang";
+  assert(Parser.url(s).format() == s);
+}
+
+test("Temper GitHub") {
+  let s = "https://en.wikipedia.org/wiki/URI_fragment#bodyContent";
+  assert(Parser.url(s).format() == s);
+}
+
+test("Google Search") {
+  let s = "https://www.google.com/search?q=ozymandias+shelley";
+  assert(Parser.url(s).format() == s);
+}
+
+let s = "https://www.google.com/search?q=ozymandias+shelley";
+console.log(Parser.url(s).format());
