@@ -1,7 +1,4 @@
 
-let {...} = import("../src/url.temper");
-let {...} = import("std/testing");
-
 test("Tour") {
   let tourExample = {
     scheme: "https",

@@ -1,7 +1,4 @@
 
-let {...} = import("./url.temper");
-let {...} = import("./util.temper");
-
 class URLStreamParser {
   public data: String;
   public var pos: StringIndex;
