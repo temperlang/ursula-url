@@ -1,0 +1,16 @@
+
+let {...} = import("../src/parser.temper");
+let {...} = import("std/testing");
+
+test("Cloudflare DNS") {
+  assert(Parser.url("http://1.1.1.1").format() == "http://1.1.1.1");
+}
+
+test("Example") {
+  assert(Parser.url("https://example.com").format() == "https://example.com");
+}
+
+test("File Empty") {
+  let s = "file:///usr/home/Bob+Jones/Code/temper-fetch/config.temper.md";
+  assert(Parser.url(s).format() == s);
+}

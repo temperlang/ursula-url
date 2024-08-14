@@ -1,0 +1,42 @@
+
+let {...} = import("../src/url.temper");
+let {...} = import("std/testing");
+
+test("Tour") {
+  let tourExample = {
+    scheme: "https",
+    authority: {
+      host: {
+        name: ["temperlang", "github", "io"]
+      },
+    },
+    path: {
+      segments: ["tld", "tour"]
+    },
+    fragment: {
+      identifier: "quick-tour-of-temper"
+    }
+  };
+
+  assert(tourExample.format() == "https://temperlang.github.io/tld/tour#quick-tour-of-temper");
+}
+
+test("SSH") {
+  let sshExample = {
+    scheme: "ssh",
+    authority: {
+      info: {
+        username: "alice",
+        password: "pa55w0rd:;"
+      },
+      host: {
+        ipv4: [192, 168, 0, 1]
+      },
+      port: {
+        number: 22
+      }
+    }
+  };
+
+  assert(sshExample.format() == "ssh://alice:pa55w0rd%3a%3b@192.168.0.1:22");
+}

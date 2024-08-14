@@ -1,0 +1,255 @@
+
+let {...} = import("./url.temper");
+let {...} = import("./util.temper");
+
+class URLStreamParser {
+  public data: String;
+  public var pos: StringIndex;
+
+  public constructor(s: String): Void {
+    data = s;
+    pos = String.start;
+  }
+
+  public isDone(): Boolean {
+    return !data.hasIndex(pos);
+  }
+
+  public peekChar(): Int {
+    return data.codeAt(pos);
+  }
+
+  public skipChar(): Void {
+    pos = data.next(pos);
+  }
+
+  public nextChar(): Int {
+    let got = peekChar();
+    skipChar();
+    return got;
+  }
+
+  public try<T>(then: fn(): Void): Void {
+    let init = pos;
+    then() orelse do {
+      pos = init;
+    }
+  }
+
+  public matchChar(c: Int): Int {
+    let got = peekChar();
+    if (got != c) {
+      bubble();
+    }
+    skipChar();
+    return got;
+  }
+
+  public readWord(): String {
+    let res = new ListBuilder<String>();
+    while (true) {
+      let chr = peekChar();
+      if (isAlpha(chr) || isDigit(chr) || chr == char'~' || chr == char'-' || chr == char'.' || chr == char'_') {
+        skipChar();
+        res.add(String.fromCodePoint(chr));
+      } else if (chr == char'+') {
+        skipChar();
+        res.add(" ");
+      } else if (chr == char'%') {
+        skipChar();
+        let high = String.fromCodePoint(nextChar());
+        let low = String.fromCodePoint(nextChar());
+        res.add(String.fromCodePoint(fromHex("${high}${low}")));
+      } else {
+        break;
+      }
+    }
+    return res.join("", fn(part: String): String {part});
+  }
+
+  public optUserInfo(): UserInfo | Null {
+    let init = pos;
+    let username = readWord();
+    let next = nextChar();
+    if (next == char':') {
+      let password = readWord();
+      if (nextChar() == char'@') {
+        return new UserInfo(username, password);
+      } else {
+        pos = init;
+        return null;
+      }
+    } else if (next == char'@') {
+      return new UserInfo(username, null);
+    } else {
+      pos = init;
+      return null;
+    }
+  }
+
+  public readHexSet(): String {
+    let res = new ListBuilder<String>();
+    while (true) {
+      let chr = peekChar();
+      if (chr == char':' || isHexDigit(chr)) {
+        skipChar();
+        res.add(String.fromCodePoint(chr));
+      } else {
+        break;
+      }
+    }
+    return res.join("", fn(part: String): String {part});
+  }
+
+  public ipv6(): HostIPv6 {
+    let init = pos;
+    let hexSet = readHexSet();
+    let double = hexSet.split("::");
+    if (double.length == 1) {
+      let prefix = hexSet.split(":");
+      if (prefix.length != 8) {
+        bubble();
+      }
+      let res = new ListBuilder<Int>();
+      for (var i = 0; i < 8; i++) {
+        res.add(fromHex(prefix[i]));
+      }
+      return new HostIPv6(res);
+    } else if (double.length == 2) {
+      let prefix = double[0].split(":");
+      let suffix = double[1].split(":");
+      if (prefix.length + suffix.length > 8) {
+        pos = init;
+        bubble();
+      }
+      let res = new ListBuilder<Int>();
+      for (var i = 0; i < prefix.length; i++) {
+        res.add(fromHex(prefix[i]));
+      }
+      for (var i = prefix.length + suffix.length; i < 8; i++) {
+        res.add(0);
+      }
+      for (var i = 0; i < suffix.length; i++) {
+        res.add(fromHex(suffix[i]));
+      }
+      return new HostIPv6(res);
+    } else {
+      bubble();
+    }
+  }
+
+  public optHost(): Host | Null {
+    let init = pos;
+    let word = readWord();
+    if (word == "") {
+      return null;
+    }
+    let split = word.split(".");
+    if ((split.length == 0 && peekChar() == char':') || (split.length == 1 && isHexNumeric(word))) {
+      pos = init;
+      return ipv6();
+    }
+    if (split.length == 4 && isNumeric(split[3])) {
+      if (!isNumeric(split[0]) || !isNumeric(split[1]) || !isNumeric(split[2])) {
+        pos = init;
+        bubble();
+      }
+      return new HostIPv4(split.map(fn(s: String): Int { s.toInt() }));
+    }
+    return new HostName(split);
+  }
+
+  public optPort(): Port | Null {
+    if (peekChar() != char':') {
+      return null;
+    }
+    return new Port(readWord().toInt());
+  }
+
+  public optAuthority(): Authority | Null {
+    if (peekChar() != char'/') {
+      return null;
+    }
+    skipChar();
+    if (nextChar() != char'/') {
+      bubble();
+    }
+    let init = pos;
+    let info = optUserInfo();
+    let host = optHost();
+    if (host == null) {
+      pos = init;
+      return null;
+    } else {
+      let port = optPort();
+      return new Authority(info, host.as<Host>(), port);
+    }
+  }
+
+  public optPath(): Path | Null {
+    if (peekChar() != char'/') {
+      return null;
+    }
+    let ret = new ListBuilder<String>();
+    while (peekChar() == char'/') {
+      skipChar();
+      ret.add(readWord());
+    }
+    return new Path(ret);
+  }
+
+  public optQuery(): Query | Null {
+    if(peekChar() != '?') {
+      return null;
+    }
+    skipChar();
+    let map = new MapBuilder<String, String | Null>();
+    while (true) {
+      let key = readWord();
+      if (peekChar() == char'=') {
+        skipChar();
+        let value = readWord();
+        map[key] = value;
+      } else {
+        map[key] = null;
+      }
+      if (peekChar() == char'&') {
+        skipChar();
+      } else {
+        break;
+      }
+    }
+    return new Query(map);
+  }
+
+  public optFragment(): Fragment | Null {
+    null
+  }
+
+  public tryURL(then: fn(URL): Void | Bubble): Void {
+    try {
+      let scheme = readWord();
+      if (nextChar() != char':') {
+        bubble();
+      }
+      let authority = optAuthority();
+      let path = optPath();
+      let query = optQuery();
+      let fragment = optFragment();
+      then(new URL(scheme, authority, path, query, fragment))
+    }
+  }
+}
+
+export class Parser {
+  public static url(s: String): URL | Bubble {
+    var url: URL | Null = null;
+    let parser = new URLStreamParser(s);
+    parser.tryURL { (arg: URL): Void;;
+      if (parser.isDone()) {
+        url = arg;
+      }
+    };
+    return url.as<URL>();
+  }
+}

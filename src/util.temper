@@ -1,0 +1,113 @@
+
+export let toHex(n: Int, digits: Int): String {
+  if (digits == 0) {
+    return "";
+  }
+  let mod = n % 16;
+  let p1 = toHex(n / 16, digits - 1);
+  let p2 = if (mod < 10) {
+    String.fromCodePoint(mod + char'0')
+  } else {
+    String.fromCodePoint(mod - 10 + char'a')
+  };
+  return "${p1}${p2}";
+}
+
+export let fromHex(s: String): Int {
+  if (s.hasIndex(String.start)) {
+    bubble();
+  }
+  var place = String.start;
+  var n = 0;
+  while (s.hasIndex(place)) {
+    let code = s.codeAt(place);
+    n *= 16;
+    if (char'0' <= code && code <= char'9') {
+      n += code - char'0';
+    } else if (char'A' <= code && code <= char'F') {
+      n += code - char'A' + 10;
+    } else if (char'a' <= code && code <= char'f') {
+      n += code - char'a' + 10;
+    } else {
+      bubble();
+    }
+    place = s.next(place);
+  }
+  return n;
+}
+
+export let isHexDigit(chr: Int): Boolean {
+  return (char'0' <= chr && chr <= char'9') || (char'a' <= chr && chr <= char'z')|| (char'A' <= chr && chr <= char'Z');
+}
+
+export let isHexNumeric(s: String): Boolean {
+  var place = String.start;
+  while (s.hasIndex(place)) {
+    if (!isHexDigit(s.codeAt(place))) {
+      return false;
+    }
+    place = s.next(place);
+  }
+  return true;
+}
+
+export let isDigit(chr: Int): Boolean {
+  return char'0' <= chr && chr <= char'9';
+}
+
+export let isNumeric(s: String): Boolean {
+  var place = String.start;
+  while (s.hasIndex(place)) {
+    if (!isDigit(s.codeAt(place))) {
+      return false;
+    }
+    place = s.next(place);
+  }
+  return true;
+}
+
+
+
+export let isAlpha(chr: Int): Boolean {
+  return (char'A' <= chr && chr <= char'Z') || (char'a' <= chr && chr <= char'z');
+}
+
+export let urlEncode(s: String): String {
+  let res = new ListBuilder<String>();
+  var place = String.start;
+  while (s.hasIndex(place)) {
+    let chr = s.codeAt(place);
+    if (isAlpha(chr) || isDigit(chr) || chr == char'~' || chr == char'-' || chr == char'.' || chr == char'_') {
+      res.add(String.fromCodePoint(chr));
+    } else if (chr == char' ') {
+      res.add("+");
+    } else {
+      res.add("%${toHex(chr, 2)}");
+    }
+    place = s.next(place);
+  }
+  return res.join("", fn(part: String): String {part});
+}
+
+export let urlDecode(s: String): String {
+  let res = new ListBuilder<String>();
+  var place = String.start;
+  while (s.hasIndex(place)) {
+    let chr = s.codeAt(place);
+    if (isAlpha(chr) || isDigit(chr) || chr == char'~' || chr == char'-' || chr == char'.' || chr == char'_') {
+      res.add(String.fromCodePoint(chr));
+    } else if (chr == char'+') {
+      res.add(" ");
+    } else if (chr == char'%') {
+      place = s.next(place);
+      let high = String.fromCodePoint(s.codeAt(place));
+      place = s.next(place);
+      let low = String.fromCodePoint(s.codeAt(place));
+      res.add(String.fromCodePoint(fromHex("${high}${low}")));
+    } else {
+      bubble();
+    }
+    place = s.next(place);
+  }
+  return res.join("", fn(part: String): String {part});
+}

@@ -1,0 +1,188 @@
+
+let {...} = import("./util.temper");
+
+export class Scheme {
+  public var scheme: String;
+
+  public format(): String {
+    return urlEncode(scheme);
+  }
+}
+
+export class UserInfo {
+  public username: String;
+  public password: String | Null;
+
+  public format(): String {
+    let usernamePart = urlEncode(username);
+    let passwordPart = if (password == null) { "" } else { ":${urlEncode(password.as<String>())}" }
+    return "${usernamePart}${passwordPart}";
+  }
+}
+
+export interface Host {
+  public format(): String;
+}
+
+export class HostName extends Host {
+  public name: Listed<String>;
+
+  public get secondLevelDomain(): String {
+    return name[name.length - 2];
+  }
+
+  public get topLevelDomain(): String {
+    return name[name.length - 1];
+  }
+
+  public format(): String {
+    return name.join(".", fn(s: String): String {
+      return urlEncode(s);
+    });
+  }
+}
+
+export class HostIPv4 extends Host {
+  public ipv4: Listed<Int>;
+
+  public get isValid(): Boolean {
+    if (ipv4.length != 4) {
+      return false;
+    }
+    for (var i = 0; i < 4; i++) {
+      let byte = ipv4[i];
+      if (!(0 <= byte && byte <= 255)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public format(): String {
+    return ipv4.join(".", fn(n: Int): String {
+      return n.toString();
+    })
+  }
+}
+
+export class HostIPv6 extends Host {
+  public ipv6: Listed<Int>;
+
+  public get isValid(): Boolean {
+    if (ipv6.length != 8) {
+      return false;
+    }
+    for (var i = 0; i < 8; i++) {
+      let short = ipv6[i];
+      if (!(0 <= short && short <= 65535)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public format(): String {
+    return ipv6.join(":", fn(n: Int): String {
+      return toHex(n, 4);
+    })
+  }
+}
+
+export class Port {
+  public number: Int;
+
+  public isValid(): Boolean {
+    return 0 <= number && number <= 65535;
+  }
+
+  public format(): String {
+    return number.toString();
+  }
+}
+
+export class Authority {
+  public info: UserInfo | Null = null;
+  public host: Host;
+  public port: Port | Null = null;
+
+  public format(): String {
+    let infoPart = if (info == null) { "" } else { "${info.as<UserInfo>().format()}@" };
+    let hostPart = host.format();
+    let portPart = if (port == null) { "" } else { ":${port.as<Port>().format()}" };
+    return "${infoPart}${hostPart}${portPart}";
+  }
+}
+
+export class Path {
+  public segments: Listed<String>;
+
+  public format(): String {
+    if (segments.length == 0) {
+      return "";
+    } else {
+      return segments.join("", fn(segment: String): String {
+        return "/${urlEncode(segment)}";
+      });
+    }
+  }
+}
+
+export class Query {
+  public parameters: Mapped<String, String | Null>;
+
+  public format(): String {
+    return parameters.keys.join("&", fn(key: String): String {
+      let value = parameters[key];
+      if (value == null) {
+        return urlEncode(key);
+      } else {
+        return "${urlEncode(key)}=${urlEncode(value.as<String>())}";
+      }
+    });
+  }
+}
+
+export class Fragment {
+  public identifier: String;
+
+  public format(): String {
+    return urlEncode(identifier);
+  }
+}
+
+export class URL {
+  public scheme: String;
+  public authority: Authority | Null = null;
+  public path: Path | Null = null;
+  public query: Query | Null = null;
+  public fragment: Fragment | Null = null;
+
+  public format(): String {
+    let schemePart = urlEncode(scheme);
+    let authorityPart = if (authority == null) {
+      if (path != null || query != null || fragment != null) {
+        "//"
+      } else {
+        ""
+      }
+    } else {
+      "//${authority.as<Authority>().format()}"
+    };
+    let pathPart = if (path == null) {
+      ""
+    } else {
+      "${path.as<Path>().format()}"
+    };
+    let queryPart = if (query == null) {
+      ""
+    } else {
+      "?${query.as<Query>().format()}"
+    };
+    let fragmentPart = if (fragment == null) {
+      ""
+    } else {
+      "#${fragment.as<Fragment>().format()}"
+    };
+    return "${schemePart}:${authorityPart}${pathPart}${queryPart}${fragmentPart}";
+  }
+}
